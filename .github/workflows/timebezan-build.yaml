@@ -14,7 +14,7 @@ env:
 
 jobs:
   build:
-    name: Build Android Debug APK
+    name: Build Android Release APK
     runs-on: ubuntu-latest
     concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
@@ -45,7 +45,32 @@ jobs:
           # کش ذخیره می‌شود تا بیلدهای بعدی دقیقه‌ها طول بکشند نه ساعت‌ها.
           save: true
 
-      - name: Compile FdroidDebug (arm64)
+      # کلید امضا در کش می‌ماند تا هر بیلد امضای یکسان داشته باشد و بتوانید
+      # نسخه‌ی جدید را روی نسخه‌ی نصب‌شده آپدیت کنید (وگرنه باید اول حذف کنید).
+      - name: Restore signing key
+        uses: actions/cache@v4
+        with:
+          path: ${{ runner.temp }}/timebezan.keystore
+          key: timebezan-signing-key
+
+      # نسخه‌ی release بدون کلید امضا بیلد نمی‌شود؛ کلید یک‌بار ساخته می‌شود
+      # و APK امضاشده و قابل نصب می‌ماند (مثل نسخه‌ی همیشگی، بدون امکانات مخصوص دیباگ).
+      - name: Prepare signing key
+        shell: bash
+        run: |
+          if [ ! -f "$RUNNER_TEMP/timebezan.keystore" ]; then
+            "$JAVA_HOME/bin/keytool" -genkeypair -keystore "$RUNNER_TEMP/timebezan.keystore" -storepass timebezan \
+              -keypass timebezan -alias timebezan -keyalg RSA -keysize 2048 -validity 10000 \
+              -dname "CN=Timebezan"
+          fi
+          cat > android/app/secure.properties <<EOF
+          spropStoreFile=$RUNNER_TEMP/timebezan.keystore
+          spropStorePassword=timebezan
+          spropKeyAlias=timebezan
+          spropKeyPassword=timebezan
+          EOF
+
+      - name: Compile FdroidRelease (arm64)
         shell: bash
         working-directory: android
         env:
@@ -54,13 +79,13 @@ jobs:
         run: |
           cmake --version
           ninja --version
-          ./gradlew -Parm64 assembleFdroidDebug --stacktrace
+          ./gradlew -Parm64 assembleFdroidRelease --stacktrace
 
       - name: Upload APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: organicmaps-fdroid-debug-arm64
+          name: organicmaps-fdroid-release-arm64
           path: android/app/build/outputs/apk/**/*.apk
           if-no-files-found: error
           retention-days: 30
