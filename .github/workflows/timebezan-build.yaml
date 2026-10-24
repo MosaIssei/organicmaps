@@ -55,7 +55,8 @@ jobs:
 
       # نسخه‌ی release بدون کلید امضا بیلد نمی‌شود؛ کلید یک‌بار ساخته می‌شود
       # و APK امضاشده و قابل نصب می‌ماند (مثل نسخه‌ی همیشگی، بدون امکانات مخصوص دیباگ).
-      # مقادیر داخل کوتیشن‌اند چون Gradle این فایل را به‌عنوان اسکریپت Groovy اجرا می‌کند.
+      # Gradle این فایل را به‌عنوان اسکریپت Groovy اجرا می‌کند، پس مقدارها رشته‌اند
+      # و با ext. تعریف می‌شوند (Gradle 9 پروپرتی داینامیک روی پروژه را رد می‌کند).
       - name: Prepare signing key
         shell: bash
         run: |
@@ -65,10 +66,10 @@ jobs:
               -dname "CN=Timebezan"
           fi
           cat > android/app/secure.properties <<EOF
-          spropStoreFile='$RUNNER_TEMP/timebezan.keystore'
-          spropStorePassword='timebezan'
-          spropKeyAlias='timebezan'
-          spropKeyPassword='timebezan'
+          ext.spropStoreFile = '$RUNNER_TEMP/timebezan.keystore'
+          ext.spropStorePassword = 'timebezan'
+          ext.spropKeyAlias = 'timebezan'
+          ext.spropKeyPassword = 'timebezan'
           EOF
 
       - name: Compile FdroidRelease (arm64)
