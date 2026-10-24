@@ -9,6 +9,8 @@ import android.provider.Settings;
 import android.view.View;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatDelegate;
+import androidx.core.os.LocaleListCompat;
 import androidx.preference.ListPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceCategory;
@@ -43,6 +45,8 @@ import java.util.Locale;
 
 public class SettingsPrefsFragment extends BaseXmlSettingsFragment implements LanguagesFragment.Listener
 {
+  // True while the app-language picker is open, so a selection is not applied to the map language.
+  private boolean mAppLanguagePicker;
   @Override
   protected int getXmlResources()
   {
@@ -91,6 +95,14 @@ public class SettingsPrefsFragment extends BaseXmlSettingsFragment implements La
     pref.setSummary(locale.getDisplayLanguage());
   }
 
+  private void updateAppLanguageSummary()
+  {
+    final Preference pref = getPreference(getString(R.string.pref_app_locale));
+    LocaleListCompat locales = AppCompatDelegate.getApplicationLocales();
+    Locale locale = locales.isEmpty() ? null : locales.get(0);
+    pref.setSummary(locale == null ? "" : locale.getDisplayName(locale));
+  }
+
   private void updateRoutingSettingsPrefsSummary()
   {
     final Preference pref = getPreference(getString(R.string.prefs_routing));
@@ -121,6 +133,7 @@ public class SettingsPrefsFragment extends BaseXmlSettingsFragment implements La
     updateVoiceInstructionsPrefsSummary();
     updateRoutingSettingsPrefsSummary();
     updateMapLanguageCodeSummary();
+    updateAppLanguageSummary();
   }
 
   @Override
@@ -152,8 +165,18 @@ public class SettingsPrefsFragment extends BaseXmlSettingsFragment implements La
       {
         startActivity(new Intent(requireActivity(), HelpActivity.class));
       }
+      else if (key.equals(getString(R.string.pref_app_locale)))
+      {
+        Bundle args = new Bundle();
+        args.putBoolean(LanguagesFragment.APP_LOCALES, true);
+        mAppLanguagePicker = true;
+        LanguagesFragment langFragment = (LanguagesFragment) getSettingsActivity().stackFragment(
+            LanguagesFragment.class, getString(R.string.app_language), args);
+        langFragment.setListener(this);
+      }
       else if (key.equals(getString(R.string.pref_map_locale)))
       {
+        mAppLanguagePicker = false;
         LanguagesFragment langFragment = (LanguagesFragment) getSettingsActivity().stackFragment(
             LanguagesFragment.class, getString(R.string.change_map_locale), null);
         langFragment.setListener(this);
@@ -629,6 +652,15 @@ public class SettingsPrefsFragment extends BaseXmlSettingsFragment implements La
   @Override
   public void onLanguageSelected(Language language)
   {
+    if (mAppLanguagePicker)
+    {
+      // Pop the picker before applying the locale, which recreates the activity.
+      getSettingsActivity().onBackPressed();
+      MwmApplication.setAppLanguageChosen(requireContext());
+      AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags(language.code));
+      return;
+    }
+
     MapLanguageCode.setMapLanguageCode(language.code);
     getSettingsActivity().onBackPressed();
   }

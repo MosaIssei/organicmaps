@@ -17,7 +17,9 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 import androidx.annotation.VisibleForTesting;
+import androidx.appcompat.app.AppCompatDelegate;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.os.LocaleListCompat;
 import androidx.core.view.ViewCompat;
 import app.organicmaps.downloader.DownloaderActivity;
 import app.organicmaps.intent.Factory;
@@ -25,6 +27,7 @@ import app.organicmaps.sdk.display.DisplayManager;
 import app.organicmaps.sdk.display.DisplayType;
 import app.organicmaps.sdk.location.LocationHelper;
 import app.organicmaps.sdk.location.LocationUtils;
+import app.organicmaps.sdk.settings.MapLanguageCode;
 import app.organicmaps.sdk.util.Config;
 import app.organicmaps.sdk.util.concurrency.UiThread;
 import app.organicmaps.sdk.util.log.Logger;
@@ -60,6 +63,12 @@ public class SplashActivity extends AppCompatActivity
   {
     super.onCreate(savedInstanceState);
     UiThread.cancelDelayedTasks(mInitCoreDelayedTask);
+
+    // Persian is the default UI language of this fork, until a language is picked in Settings.
+    // AppCompat applies the locale from an activity, so it cannot be done in MwmApplication.
+    if (!MwmApplication.isAppLanguageChosen(this) && AppCompatDelegate.getApplicationLocales().isEmpty())
+      AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("fa"));
+
     setContentView(R.layout.activity_splash);
     adjustBrandingInfoPadding();
 
@@ -143,6 +152,11 @@ public class SplashActivity extends AppCompatActivity
       showFatalErrorDialog(R.string.dialog_error_storage_title, R.string.dialog_error_storage_message, error);
       return;
     }
+
+    // The map labels and search of this fork default to Persian; the Settings "Map language"
+    // picker overrides it.
+    if (Config.isFirstLaunch(this))
+      MapLanguageCode.setMapLanguageCode("fa");
 
     if (Config.isFirstLaunch(this) && LocationUtils.checkLocationPermission(this))
     {

@@ -85,6 +85,16 @@
       android:manageSpaceActivity="${applicationId}.ManageSpaceActivity"
       tools:targetApi="33">
 
+    <!-- Stores the app language picked in Settings on Android 12 and older. -->
+    <service
+        android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"
+        android:enabled="false"
+        android:exported="false">
+      <meta-data
+          android:name="autoStoreLocales"
+          android:value="true" />
+    </service>
+
     <!-- Allows for config and orientation change without killing/restarting main activity -->
     <activity
       android:name="app.organicmaps.SplashActivity"

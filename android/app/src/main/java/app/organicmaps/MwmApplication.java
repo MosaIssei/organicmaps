@@ -48,6 +48,9 @@ public class MwmApplication extends Application implements Application.ActivityL
   @NonNull
   private static final String TAG = MwmApplication.class.getSimpleName();
 
+  // The app language picked in Settings; the Persian default is not applied again once it is set.
+  private static final String KEY_APP_LANGUAGE_CHOSEN = "AppLanguageChosen";
+
   @SuppressWarnings("NotNullFieldNotInitialized")
   @NonNull
   private OrganicMaps mOrganicMaps;
@@ -116,6 +119,17 @@ public class MwmApplication extends Application implements Application.ActivityL
   public static SharedPreferences prefs(@NonNull Context context)
   {
     return from(context).getOrganicMaps().getPreferences();
+  }
+
+  // While the app language is not chosen in Settings, SplashActivity applies the Persian default.
+  public static boolean isAppLanguageChosen(@NonNull Context context)
+  {
+    return prefs(context).getBoolean(KEY_APP_LANGUAGE_CHOSEN, false);
+  }
+
+  public static void setAppLanguageChosen(@NonNull Context context)
+  {
+    prefs(context).edit().putBoolean(KEY_APP_LANGUAGE_CHOSEN, true).apply();
   }
 
   @Override

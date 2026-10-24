@@ -37266,6 +37266,12 @@ vi = Ngôn ngữ bản đồ
 zh-Hans = 地图语言
 zh-Hant = 地圖語言
 
+[app_language]
+comment = Settings «General» category: the language of the app interface itself, not the map
+tags = android-app
+en = Language
+fa = زبان
+
 [splash_subtitle]
 comment = OpenStreetMap text on splash screen
 tags = android-app
