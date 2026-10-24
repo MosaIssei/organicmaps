@@ -1,0 +1,66 @@
+name: Timebezan Build
+
+# فقط روی شاخه‌ی خودمان اجرا می‌شود تا ورک‌فلوهای سنگین upstream
+# (که روی master تنظیم شده‌اند) با هر push ما اجرا نشوند.
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - timebezan
+
+env:
+  # خودِ Organic Maps این را لازم دارد: Android Gradle Plugin lint به Java 21 نیاز دارد.
+  JAVA_HOME: /usr/lib/jvm/temurin-21-jdk-amd64
+
+jobs:
+  build:
+    name: Build Android Debug APK
+    runs-on: ubuntu-latest
+    concurrency:
+      group: ${{ github.workflow }}-${{ github.ref }}
+      cancel-in-progress: true
+
+    steps:
+      - name: Install build tools and dependencies
+        shell: bash
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y ninja-build
+
+      - name: Checkout sources
+        uses: actions/checkout@v6
+        with:
+          # اسکریپت نسخه‌گذاری (tools/unix/version.sh) از تاریخچه‌ی گیت
+          # شماره‌ی نسخه را می‌سازد؛ ۲۰۰ کامیت برای روز جاری کافی است.
+          fetch-depth: 200
+
+      - name: Parallel submodules checkout
+        shell: bash
+        run: git submodule update --depth 1 --init --recursive --jobs=$(($(nproc) * 20))
+
+      - name: Configure ccache
+        uses: hendrikmuhs/ccache-action@v1.2.24
+        with:
+          key: ${{ github.workflow }}-${{ github.ref_name }}-arm64
+          # کش ذخیره می‌شود تا بیلدهای بعدی دقیقه‌ها طول بکشند نه ساعت‌ها.
+          save: true
+
+      - name: Compile FdroidDebug (arm64)
+        shell: bash
+        working-directory: android
+        env:
+          CMAKE_C_COMPILER_LAUNCHER: ccache
+          CMAKE_CXX_COMPILER_LAUNCHER: ccache
+        run: |
+          cmake --version
+          ninja --version
+          ./gradlew -Parm64 assembleFdroidDebug --stacktrace
+
+      - name: Upload APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: organicmaps-fdroid-debug-arm64
+          path: android/app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
+          retention-days: 30
